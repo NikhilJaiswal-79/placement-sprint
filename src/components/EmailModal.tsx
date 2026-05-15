@@ -87,8 +87,15 @@ export default function EmailModal() {
         // Only send if we have an email and haven't sent it in this session yet
         if (savedEmail && !alreadySent) {
           const payload = calculateLeadPayload(savedEmail);
-          const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-          navigator.sendBeacon("https://nikhil-jaiswal.app.n8n.cloud/webhook-test/bf84f75c-b4bb-4a62-8865-f3ab7c6572bc", blob);
+          
+          // Use fetch with keepalive instead of sendBeacon for reliable JSON delivery on exit
+          // sendBeacon often fails with application/json due to CORS preflight requirements
+          fetch("https://nikhil-jaiswal.app.n8n.cloud/webhook-test/bf84f75c-b4bb-4a62-8865-f3ab7c6572bc", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            keepalive: true
+          }).catch((err) => console.error("Exit-intent webhook failed:", err));
           
           // Mark as sent for this session to avoid multiple beacons if they toggle tabs
           sessionStorage.setItem("ps_webhook_sent", "true");
