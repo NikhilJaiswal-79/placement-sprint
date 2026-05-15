@@ -21,6 +21,87 @@ export default function EmailModal() {
     }
   }, []);
 
+  const calculateLeadPayload = (emailToUse: string) => {
+    const stored = sessionStorage.getItem("ps_lead_data");
+    const leadData = stored ? JSON.parse(stored) : {
+      pagesVisited: [],
+      scrolls: [],
+      ctasClicked: [],
+      sessionStartTime: Date.now(),
+      utmParams: {}
+    };
+
+    const timeSpentSeconds = Math.round((Date.now() - (leadData.sessionStartTime || Date.now())) / 1000);
+    
+    let score = 0;
+    
+    // 1. Time spent (1 point per 10 seconds, max 20 points)
+    score += Math.min(20, Math.floor(timeSpentSeconds / 10));
+
+    // 2. CTA clicked mapping
+    const ctas = leadData.ctasClicked || [];
+    const hasPricing = ctas.some((c: string) => c.includes("pricing") || c.includes("enroll"));
+    const hasDemo = ctas.some((c: string) => c.includes("demo"));
+    
+    if (hasPricing) {
+      score += 40; // pricing > demo
+    } else if (hasDemo) {
+      score += 20; // demo > learn more
+    } else if (ctas.length > 0) {
+      score += 10;
+    }
+
+    // 3. Sections viewed (using scroll > 80% as proxy for viewed sections)
+    const scrolls = leadData.scrolls || [];
+    score += Math.min(30, scrolls.length * 10);
+
+    // Add extra points for multiple pages visited
+    const pages = leadData.pagesVisited || [];
+    score += Math.min(10, pages.length * 2);
+
+    // Cap at 100
+    score = Math.min(100, score);
+
+    // Label assignment
+    let label = "Cold";
+    if (score >= 70) label = "Hot";
+    else if (score >= 40) label = "Warm";
+
+    return {
+      email: emailToUse,
+      tracked: {
+        pagesVisited: pages,
+        timeSpentSeconds,
+        sectionsScrolled: scrolls,
+        ctasClicked: ctas,
+        utmParams: leadData.utmParams || {}
+      },
+      score,
+      label,
+      exitIntent: true
+    };
+  };
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        const savedEmail = localStorage.getItem("ps_pending_email");
+        const hasCaptured = localStorage.getItem("ps_lead_captured");
+        
+        // Only send if we have an email and haven't successfully submitted the form yet
+        if (savedEmail && !hasCaptured) {
+          const payload = calculateLeadPayload(savedEmail);
+          const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+          navigator.sendBeacon("https://nikhil-jaiswal.app.n8n.cloud/webhook-test/bf84f75c-b4bb-4a62-8865-f3ab7c6572bc", blob);
+          console.log("📤 [Exit Intent]: Payload sent via Beacon API", payload);
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
@@ -38,63 +119,8 @@ export default function EmailModal() {
 
     // ----- LEAD SCORING & N8N WEBHOOK INTEGRATION -----
     try {
-      const stored = sessionStorage.getItem("ps_lead_data");
-      const leadData = stored ? JSON.parse(stored) : {
-        pagesVisited: [],
-        scrolls: [],
-        ctasClicked: [],
-        sessionStartTime: Date.now(),
-        utmParams: {}
-      };
-
-      const timeSpentSeconds = Math.round((Date.now() - (leadData.sessionStartTime || Date.now())) / 1000);
-      
-      let score = 0;
-      
-      // 1. Time spent (1 point per 10 seconds, max 20 points)
-      score += Math.min(20, Math.floor(timeSpentSeconds / 10));
-
-      // 2. CTA clicked mapping
-      const ctas = leadData.ctasClicked || [];
-      const hasPricing = ctas.some((c: string) => c.includes("pricing") || c.includes("enroll"));
-      const hasDemo = ctas.some((c: string) => c.includes("demo"));
-      
-      if (hasPricing) {
-        score += 40; // pricing > demo
-      } else if (hasDemo) {
-        score += 20; // demo > learn more
-      } else if (ctas.length > 0) {
-        score += 10;
-      }
-
-      // 3. Sections viewed (using scroll > 80% as proxy for viewed sections)
-      const scrolls = leadData.scrolls || [];
-      score += Math.min(30, scrolls.length * 10);
-
-      // Add extra points for multiple pages visited
-      const pages = leadData.pagesVisited || [];
-      score += Math.min(10, pages.length * 2);
-
-      // Cap at 100
-      score = Math.min(100, score);
-
-      // Label assignment
-      let label = "Cold";
-      if (score >= 70) label = "Hot";
-      else if (score >= 40) label = "Warm";
-
-      const payload = {
-        email,
-        tracked: {
-          pagesVisited: pages,
-          timeSpentSeconds,
-          sectionsScrolled: scrolls,
-          ctasClicked: ctas,
-          utmParams: leadData.utmParams || {}
-        },
-        score,
-        label
-      };
+      const payload = calculateLeadPayload(email);
+      payload.exitIntent = false;
 
       console.log("🚀 [Lead Scored & Sending to n8n]:", payload);
 
@@ -109,6 +135,7 @@ export default function EmailModal() {
     // ----- END LEAD SCORING -----
 
     localStorage.setItem("ps_lead_captured", "true");
+    localStorage.removeItem("ps_pending_email");
     setSubmitted(true);
     setIsSubmitting(false);
     
@@ -139,7 +166,11 @@ export default function EmailModal() {
                 <input 
                   type="email" 
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEmail(val);
+                    localStorage.setItem("ps_pending_email", val);
+                  }}
                   placeholder="Enter your email address" 
                   required
                   className="w-full bg-white/5 border border-border rounded-lg px-4 py-3 text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
