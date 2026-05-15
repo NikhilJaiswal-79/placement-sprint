@@ -78,7 +78,7 @@ export default function EmailModal() {
       },
       score,
       label,
-      exitIntent: true
+      formSubmitted: localStorage.getItem("ps_lead_captured") === "true"
     };
   };
 
@@ -86,14 +86,17 @@ export default function EmailModal() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         const savedEmail = localStorage.getItem("ps_pending_email");
-        const hasCaptured = localStorage.getItem("ps_lead_captured");
+        const alreadySent = sessionStorage.getItem("ps_webhook_sent");
         
-        // Only send if we have an email and haven't successfully submitted the form yet
-        if (savedEmail && !hasCaptured) {
+        // Only send if we have an email and haven't sent it in this session yet
+        if (savedEmail && !alreadySent) {
           const payload = calculateLeadPayload(savedEmail);
           const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
           navigator.sendBeacon("https://nikhil-jaiswal.app.n8n.cloud/webhook-test/bf84f75c-b4bb-4a62-8865-f3ab7c6572bc", blob);
-          console.log("📤 [Exit Intent]: Payload sent via Beacon API", payload);
+          
+          // Mark as sent for this session to avoid multiple beacons if they toggle tabs
+          sessionStorage.setItem("ps_webhook_sent", "true");
+          console.log("📤 [Session Exit]: Final payload sent to n8n", payload);
         }
       }
     };
@@ -117,28 +120,16 @@ export default function EmailModal() {
       }
     }
 
-    // ----- LEAD SCORING & N8N WEBHOOK INTEGRATION -----
-    try {
-      const payload = calculateLeadPayload(email);
-      payload.exitIntent = false;
-
-      console.log("🚀 [Lead Scored & Sending to n8n]:", payload);
-
-      await fetch("https://nikhil-jaiswal.app.n8n.cloud/webhook-test/bf84f75c-b4bb-4a62-8865-f3ab7c6572bc", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-    } catch (err) {
-      console.error("Failed to process lead scoring or send webhook", err);
-    }
-    // ----- END LEAD SCORING -----
-
+    // Mark as captured so modal doesn't show again
     localStorage.setItem("ps_lead_captured", "true");
-    localStorage.removeItem("ps_pending_email");
+    // Ensure the email is stored for the exit trigger
+    localStorage.setItem("ps_pending_email", email);
+    
     setSubmitted(true);
     setIsSubmitting(false);
     
+    console.log("✅ [Lead Captured]: Payload will be sent when user leaves the website.");
+
     // Close after a brief success message
     setTimeout(() => setIsOpen(false), 2000);
   };
