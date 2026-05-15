@@ -35,15 +35,15 @@ export default function EmailModal() {
     
     let score = 0;
     
-    // 1. Time spent (1 point per 10 seconds, max 20 points)
-    score += Math.min(20, Math.floor(timeSpentSeconds / 10));
+    // 1. Time spent (1 point per 60 seconds, max 20 points)
+    score += Math.min(20, Math.floor(timeSpentSeconds / 60));
 
     // 2. CTA clicked mapping
     const ctas = leadData.ctasClicked || [];
     const hasPricing = ctas.some((c: string) => c.includes("pricing") || c.includes("enroll"));
     
     if (hasPricing) {
-      score += 50;
+      score += 40;
     } else if (ctas.length > 0) {
       score += 20;
     }
