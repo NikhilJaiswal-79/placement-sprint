@@ -25,9 +25,6 @@ export default function Navbar() {
           <Link href="/about" className="text-sm font-medium hover:text-primary transition-colors">
             About
           </Link>
-          <Link href="/demo" className="text-sm font-medium hover:text-primary transition-colors">
-            Demo
-          </Link>
         </div>
         <div className="flex items-center">
           <Link

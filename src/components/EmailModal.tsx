@@ -41,14 +41,11 @@ export default function EmailModal() {
     // 2. CTA clicked mapping
     const ctas = leadData.ctasClicked || [];
     const hasPricing = ctas.some((c: string) => c.includes("pricing") || c.includes("enroll"));
-    const hasDemo = ctas.some((c: string) => c.includes("demo"));
     
     if (hasPricing) {
-      score += 40; // pricing > demo
-    } else if (hasDemo) {
-      score += 20; // demo > learn more
+      score += 50;
     } else if (ctas.length > 0) {
-      score += 10;
+      score += 20;
     }
 
     // 3. Sections viewed (using scroll > 80% as proxy for viewed sections)
@@ -77,8 +74,7 @@ export default function EmailModal() {
         utmParams: leadData.utmParams || {}
       },
       score,
-      label,
-      formSubmitted: localStorage.getItem("ps_lead_captured") === "true"
+      label
     };
   };
 
