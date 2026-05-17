@@ -49,12 +49,13 @@ export default function Pricing() {
               </li>
             ))}
           </ul>
-          <button
-            className="w-full bg-primary hover:bg-primary/90 text-white px-6 py-4 rounded-lg text-lg font-medium transition-all"
+          <Link
+            href="/checkout"
+            className="w-full bg-primary hover:bg-primary/90 text-white px-6 py-4 rounded-lg text-lg font-medium transition-all block text-center"
             data-track="enroll_button"
           >
             Enroll Now
-          </button>
+          </Link>
         </div>
 
         {/* Card 2 */}
@@ -72,12 +73,13 @@ export default function Pricing() {
               </li>
             ))}
           </ul>
-          <button
-            className="w-full bg-white/10 hover:bg-white/20 text-white px-6 py-4 rounded-lg text-lg font-medium transition-all"
+          <Link
+            href="/checkout"
+            className="w-full bg-white/10 hover:bg-white/20 text-white px-6 py-4 rounded-lg text-lg font-medium transition-all block text-center"
             data-track="enroll_button_payment_plan"
           >
             Start Payment Plan
-          </button>
+          </Link>
         </div>
       </div>
 
