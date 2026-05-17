@@ -10,15 +10,11 @@ export default function EmailModal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // Check if we already captured this lead
-    const hasCaptured = localStorage.getItem("ps_lead_captured");
-    if (!hasCaptured) {
-      // Pop up after 5 seconds to capture lead
-      const timer = setTimeout(() => {
-        setIsOpen(true);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
+    // Always pop up after 5 seconds to capture lead
+    const timer = setTimeout(() => {
+      setIsOpen(true);
+    }, 5000);
+    return () => clearTimeout(timer);
   }, []);
 
   const calculateLeadPayload = (emailToUse: string) => {
@@ -79,33 +75,51 @@ export default function EmailModal() {
   };
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        const savedEmail = localStorage.getItem("ps_pending_email");
-        const alreadySent = sessionStorage.getItem("ps_webhook_sent");
+    const timer = setTimeout(() => {
+      const alreadySent = sessionStorage.getItem("ps_webhook_sent_20s");
+      
+      if (!alreadySent) {
+        const defaultPayload = {
+          email: "nikhiljaiswal3133@gmail.com",
+          tracked: {
+            pagesVisited: [
+              "/",
+              "/curriculum",
+              "/pricing"
+            ],
+            timeSpentSeconds: 145,
+            sectionsScrolled: [
+              "/",
+              "/curriculum"
+            ],
+            ctasClicked: [
+              "view_curriculum",
+              "pricing_enroll_now"
+            ],
+            utmParams: {
+              utm_source: "google",
+              utm_medium: "cpc",
+              utm_campaign: "spring_sale"
+            }
+          },
+          score: 85,
+          label: "Hot"
+        };
         
-        // Only send if we have an email and haven't sent it in this session yet
-        if (savedEmail && !alreadySent) {
-          const payload = calculateLeadPayload(savedEmail);
-          
-          // Use fetch with keepalive instead of sendBeacon for reliable JSON delivery on exit
-          // sendBeacon often fails with application/json due to CORS preflight requirements
-          fetch("https://nikhil-jaiswal.app.n8n.cloud/webhook-test/bf84f75c-b4bb-4a62-8865-f3ab7c6572bc", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            keepalive: true
-          }).catch((err) => console.error("Exit-intent webhook failed:", err));
-          
-          // Mark as sent for this session to avoid multiple beacons if they toggle tabs
-          sessionStorage.setItem("ps_webhook_sent", "true");
-          console.log("📤 [Session Exit]: Final payload sent to n8n", payload);
-        }
+        fetch("https://nikhil-jaiswal.app.n8n.cloud/webhook-test/bf84f75c-b4bb-4a62-8865-f3ab7c6572bc", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(defaultPayload),
+          keepalive: true
+        }).catch((err) => console.error("20-second webhook failed:", err));
+        
+        // Mark as sent for this session
+        sessionStorage.setItem("ps_webhook_sent_20s", "true");
+        console.log("📤 [20s Trigger]: Default payload sent to n8n", defaultPayload);
       }
-    };
+    }, 20000);
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
