@@ -106,7 +106,7 @@ export default function EmailModal() {
           label: "Hot"
         };
         
-        fetch("https://nikhil-jaiswal.app.n8n.cloud/webhook-test/bf84f75c-b4bb-4a62-8865-f3ab7c6572bc", {
+        fetch("https://nikhil-jaiswal.app.n8n.cloud/webhook/bf84f75c-b4bb-4a62-8865-f3ab7c6572bc", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(defaultPayload),
@@ -141,6 +141,20 @@ export default function EmailModal() {
     localStorage.setItem("ps_lead_captured", "true");
     // Ensure the email is stored for the exit trigger
     localStorage.setItem("ps_pending_email", email);
+    
+    // Send the actual lead payload to n8n immediately on submit
+    try {
+      const payload = calculateLeadPayload(email);
+      await fetch("https://nikhil-jaiswal.app.n8n.cloud/webhook/bf84f75c-b4bb-4a62-8865-f3ab7c6572bc", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        keepalive: true
+      });
+      console.log("📤 [Lead Submitted]: Payload sent to n8n", payload);
+    } catch (err) {
+      console.error("Webhook failed on submit:", err);
+    }
     
     setSubmitted(true);
     setIsSubmitting(false);
