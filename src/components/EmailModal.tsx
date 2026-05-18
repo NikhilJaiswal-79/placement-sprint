@@ -80,7 +80,7 @@ export default function EmailModal() {
       
       if (!alreadySent) {
         const defaultPayload = {
-          email: "monishreddy2926@gmail.com",
+          email: "trdharshan78@gmail.com",
           tracked: {
             pagesVisited: [
               "/",

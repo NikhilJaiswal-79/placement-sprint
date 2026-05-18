@@ -27,7 +27,7 @@ export default function Checkout() {
         </div>
         <h1 className="text-4xl font-bold mb-4">Payment Successful!</h1>
         <p className="text-xl text-muted-foreground mb-8">
-          Welcome to PlacementSprint. We've sent your receipt and login details to your email.
+          Welcome to PlacementSprint. We&apos;ve sent your receipt and login details to your email.
         </p>
         <Link
           href="/"
